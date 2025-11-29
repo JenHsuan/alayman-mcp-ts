@@ -1,0 +1,25 @@
+{
+  "name": "alayman-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for fetching articles from alayman.io",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "watch": "tsc --watch"
+  },
+  "keywords": ["mcp", "model-context-protocol", "alayman", "articles"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.23.0",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
