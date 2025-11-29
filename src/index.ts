@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 import 'dotenv/config';
+import { randomUUID } from 'crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import fetch from 'node-fetch';
+import express, { Request, Response } from 'express';
+import cors from 'cors';
 
 // Article interface for type safety
 interface Article {
@@ -179,7 +182,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
     prompts: [
       {
         name: 'list-articles',
-        description: "List {number} alayman's articles {condition}",
+        description: "List {number} alayman's articles {condition}. Return detail information of these articles",
         arguments: [
           {
             name: 'number',
@@ -234,9 +237,39 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 
 // Main function to start the server
 async function main() {
-  const transport = new StdioServerTransport();
+  const app = express();
+  const PORT = process.env.PORT || 3000;
+
+  // Enable CORS for all routes
+  app.use(cors());
+  app.use(express.json());
+
+  // Create HTTP transport with session management
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+  });
+
+  // Connect server to transport
   await server.connect(transport);
-  console.error('[MCP] Alayman MCP Server running on stdio');
+  console.error('[MCP] Server connected to HTTP transport');
+
+  // Health check endpoint
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok', server: 'alayman-mcp-server', version: '1.0.0' });
+  });
+
+  // MCP endpoint for HTTP transport
+  app.post('/mcp', async (req: Request, res: Response) => {
+    console.error('[MCP] HTTP request received');
+    await transport.handleRequest(req, res, req.body);
+  });
+
+  // Start the server
+  app.listen(PORT, () => {
+    console.error(`[MCP] Alayman MCP Server running on http://localhost:${PORT}`);
+    console.error(`[MCP] HTTP endpoint: http://localhost:${PORT}/mcp`);
+    console.error(`[MCP] Health check: http://localhost:${PORT}/health`);
+  });
 }
 
 main().catch((error) => {

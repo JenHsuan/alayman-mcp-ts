@@ -1,12 +1,14 @@
 # Alayman MCP Server
 
-A Model Context Protocol (MCP) server that provides access to articles from [alayman.io](https://alayman.io) via STDIO transport for use with Claude Code and other MCP clients.
+A Model Context Protocol (MCP) server that provides access to articles from [alayman.io](https://alayman.io) via HTTP transport for use with Claude Code and other MCP clients.
 
 ## Features
 
 - **Tool: `fetch-articles`** - Fetch articles from the alayman.io API with optional filtering
-- **STDIO Transport** - Compatible with Claude Code and other STDIO-based MCP clients
+- **SSE Transport** - HTTP-based Server-Sent Events for real-time communication
+- **REST API** - Includes health check and message endpoints
 - **Type-safe** - Built with TypeScript and Zod validation
+- **CORS Support** - Accessible from web applications
 
 ## Installation
 
@@ -20,22 +22,75 @@ npm install
 npm run build
 ```
 
-## Adding to Claude Code
+## Quick Start
 
-Follow these steps to add the Alayman MCP server to Claude Code:
+### Step 1: Installation and Configuration
 
-### Step 1: Build the Project
-
-First, clone the repository and build the project:
+Clone the repository and install dependencies:
 
 ```bash
 git clone <repository-url>
 cd alayman-mcp-ts
 npm install
+```
+
+### Step 2: Environment Setup
+
+Copy the example environment file and configure:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` if needed (default values should work):
+
+```env
+# API Configuration
+API_BASE_URL=https://alayman.io/api/articles
+
+# Server Configuration
+PORT=3000
+```
+
+### Step 3: Build and Start the Server
+
+Build the TypeScript code:
+
+```bash
 npm run build
 ```
 
-### Step 2: Locate Your Claude Code Configuration File
+Start the server:
+
+```bash
+npm start
+```
+
+You should see output like:
+```
+[MCP] Alayman MCP Server running on http://localhost:3000
+[MCP] SSE endpoint: http://localhost:3000/sse
+[MCP] Health check: http://localhost:3000/health
+```
+
+### Step 4: Verify Server is Running
+
+Test the health endpoint:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Expected response:
+```json
+{"status":"ok","server":"alayman-mcp-server","version":"1.0.0"}
+```
+
+## Adding to Claude Code
+
+Follow these steps to connect the SSE server to Claude Code:
+
+### Step 1: Locate Your Claude Code Configuration File
 
 The configuration file location depends on your operating system:
 
@@ -44,56 +99,27 @@ The configuration file location depends on your operating system:
 
 If the file doesn't exist, create it with an empty JSON object: `{}`
 
-### Step 3: Add the MCP Server Configuration
+### Step 2: Add the MCP Server Configuration
 
-Edit the configuration file and add the `mcpServers` section. **Important**: Use the absolute path to your project's build directory.
+Edit the configuration file and add the `mcpServers` section with SSE transport:
 
 ```json
 {
   "mcpServers": {
     "alayman": {
-      "command": "node",
-      "args": [
-        "/absolute/path/to/alayman-mcp-ts/build/index.js"
-      ]
+      "url": "http://localhost:3000/sse"
     }
   }
 }
 ```
 
-**Example for macOS/Linux:**
-```json
-{
-  "mcpServers": {
-    "alayman": {
-      "command": "node",
-      "args": [
-        "/Users/yourname/Projects/alayman-mcp-ts/build/index.js"
-      ]
-    }
-  }
-}
-```
+**Note:** Make sure the MCP server is running before starting Claude Code.
 
-**Example for Windows:**
-```json
-{
-  "mcpServers": {
-    "alayman": {
-      "command": "node",
-      "args": [
-        "C:\\Users\\yourname\\Projects\\alayman-mcp-ts\\build\\index.js"
-      ]
-    }
-  }
-}
-```
-
-### Step 4: Restart Claude Code
+### Step 3: Restart Claude Code
 
 Completely restart Claude Code (quit and reopen) for the changes to take effect.
 
-### Step 5: Verify Installation
+### Step 4: Verify Integration
 
 You can verify the MCP server is working by asking Claude:
 - "List all alayman's articles"
@@ -236,17 +262,33 @@ alayman-mcp-ts/
 
 ## Development
 
-### Watch Mode
+### Development Mode
+
+For development with auto-rebuild:
 
 ```bash
 npm run watch
 ```
 
-This will recompile TypeScript files automatically when they change.
+In another terminal, start the server:
+
+```bash
+npm start
+```
 
 ### Logging
 
-All server logs are written to `stderr` (not `stdout`) to avoid corrupting MCP protocol messages. Look for logs prefixed with `[MCP]`.
+All server logs are written to `stderr` (not `stdout`) to maintain clean SSE communication. Look for logs prefixed with `[MCP]`.
+
+### API Endpoints
+
+The server exposes the following endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check endpoint |
+| `/sse` | GET | SSE endpoint for MCP communication |
+| `/message` | POST | Endpoint for receiving MCP messages |
 
 ## API Documentation
 
@@ -268,15 +310,27 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Troubleshooting
 
 ### Server not appearing in Claude Code
-- Verify the path in your `config.json` is absolute, not relative
-- Make sure you ran `npm run build` after making changes
-- Restart Claude Code completely after configuration changes
-- Check Claude Code logs for MCP server errors
+- **Verify the server is running**: Check that `http://localhost:3000/health` returns a successful response
+- **Check the URL in config.json**: Ensure it matches `http://localhost:3000/sse`
+- **Port conflicts**: If port 3000 is in use, change the `PORT` in your `.env` file and update the config
+- **Restart Claude Code**: Completely quit and reopen Claude Code after configuration changes
+- **Check Claude Code logs**: Look for MCP connection errors
+
+### Server won't start
+- **Port already in use**: Change the `PORT` in `.env` to a different value (e.g., 3001)
+- **Dependencies not installed**: Run `npm install` to ensure all packages are installed
+- **Build errors**: Run `npm run build` and check for TypeScript compilation errors
+- **Environment file missing**: Copy `.env.example` to `.env`
+
+### Connection errors
+- **SSE connection fails**: Ensure the server is running before starting Claude Code
+- **CORS issues**: The server has CORS enabled by default, but check if any firewall is blocking requests
+- **Network issues**: Verify you can access `http://localhost:3000/health` from your browser
 
 ### API errors
-- Verify that `https://alayman.io/api/articles` is accessible
-- Check your internet connection
-- Review server logs in stderr for detailed error messages
+- **Articles not fetching**: Verify that `https://alayman.io/api/articles` is accessible
+- **Check your internet connection**: The server needs internet access to fetch articles
+- **Review server logs**: Check stderr output for detailed error messages prefixed with `[MCP]`
 
 ## Quick Reference
 
