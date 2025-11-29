@@ -211,7 +211,8 @@ export default {
 						sse: "/sse",
 						mcp: "/mcp",
 					},
-					tools: ["get_all_articles", "get_article_by_id", "search_articles", "filter_by_category"],
+					tools: ["get_all_articles", "search_articles"],
+					prompts: ["list_articles"],
 				}),
 				{
 					status: 200,

@@ -4,12 +4,14 @@ A Model Context Protocol (MCP) server for fetching and querying articles from [a
 
 ## Features
 
-This MCP server provides four tools for interacting with the alayman.io articles API:
+This MCP server provides tools and prompts for interacting with the alayman.io articles API:
 
-1. **get_all_articles** - Fetch all available articles
-2. **get_article_by_id** - Retrieve a specific article by its ID
-3. **search_articles** - Search articles by keyword in titles
-4. **filter_by_category** - Filter articles by category number
+### Tools
+1. **get_all_articles** - Fetch articles with pagination support
+2. **search_articles** - Search articles by keyword in titles
+
+### Prompts
+1. **list_articles** - Generate a prompt to list articles with custom conditions
 
 ## Quick Start
 
@@ -41,10 +43,16 @@ For local development, you can also create a `.env` file (see `.env.example` for
 
 ### Development
 
-Run the server locally:
+* Run the server locally:
 
 ```bash
 npm run dev
+```
+
+* Add the MCP server URL to your Claude code
+
+```
+claude mcp add --scope user --transport sse alayman http://localhost:8788/sse
 ```
 
 The server will be available at `http://localhost:8787`
@@ -59,8 +67,8 @@ npm run deploy
 
 ## API Endpoints
 
-- **/** - Health check and server info
-- **/sse** - Server-Sent Events endpoint
+- **/** - Health check and server info (returns available tools and endpoints)
+- **/sse** - Server-Sent Events endpoint for MCP communication
 - **/sse/message** - SSE message endpoint
 - **/mcp** - MCP protocol endpoint
 
@@ -68,40 +76,32 @@ npm run deploy
 
 ### 1. get_all_articles
 
-Fetches all articles from the alayman.io API.
-
-**Parameters:** None
-
-**Example Response:**
-```
-Found 50 articles:
-
-ID: 1
-Title: Article Title
-Subtitle: Brief description
-Author: Author Name
-Published: 2024-01-15T10:00:00Z
-Reading Time: 5 min read
-Category: 1
-URL: https://alayman.io/article-url
-...
-```
-
-### 2. get_article_by_id
-
-Retrieves a specific article by its ID.
+Fetches articles from the alayman.io API with pagination support.
 
 **Parameters:**
-- `id` (number, required): The ID of the article to fetch
+- `limit` (number, optional): Number of articles to return (default: 20)
+- `offset` (number, optional): Number of articles to skip (default: 0)
 
 **Example:**
 ```json
 {
-  "id": 42
+  "limit": 10,
+  "offset": 0
 }
 ```
 
-### 3. search_articles
+**Example Response:**
+```json
+{
+  "articles": [...],
+  "total": 307,
+  "offset": 0,
+  "limit": 10,
+  "has_more": true
+}
+```
+
+### 2. search_articles
 
 Searches for articles matching a keyword in their titles.
 
@@ -111,23 +111,44 @@ Searches for articles matching a keyword in their titles.
 **Example:**
 ```json
 {
-  "keyword": "JavaScript"
+  "keyword": "Angular"
 }
 ```
 
-### 4. filter_by_category
+**Example Response:**
+```
+Found 30 article(s) matching "Angular":
 
-Filters articles by category number.
+ID: 307
+Title: Add Interactive Abilities with D3.js in Angular
+Subtitle: Through previous articles...
+Author: Jen-Hsuan Hsieh (Sean)
+Published: 2025-08-23T06:07:28Z
+Reading Time:
+Category: 1
+URL: https://medium.com/a-layman/...
+...
+```
 
-**Parameters:**
-- `category` (number, required): Category number to filter articles
+## Available Prompts
+
+### list_articles
+
+Generates a prompt to list a specific number of alayman's articles with optional custom conditions.
+
+**Arguments:**
+- `number` (number, optional): Number of articles to list (default: 10)
+- `condition` (string, optional): Custom condition or filter criteria for the articles
 
 **Example:**
 ```json
 {
-  "category": 1
+  "number": 10,
+  "condition": "about Angular"
 }
 ```
+
+This will generate a prompt: "List 10 alayman's articles about Angular"
 
 ## Project Structure
 
