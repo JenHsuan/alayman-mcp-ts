@@ -20,11 +20,11 @@ interface Article {
 
 // Cloudflare Workers environment bindings
 interface Env {
-	// Add any environment variables or bindings here if needed
+	ALAYMAN_API_URL: string;
 }
 
 // Define our MCP agent for Alayman articles (exported as Durable Object)
-class AlaymanMCP extends McpAgent {
+class AlaymanMCP extends McpAgent<Env> {
 	server = new McpServer({
 		name: "Alayman Articles Server",
 		version: "1.0.0",
@@ -32,7 +32,8 @@ class AlaymanMCP extends McpAgent {
 
 	private async fetchArticles(): Promise<Article[]> {
 		try {
-			const response = await fetch("https://alayman.io/api/articles");
+			const apiUrl = (this.env as Env).ALAYMAN_API_URL;
+			const response = await fetch(apiUrl);
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
@@ -189,49 +190,6 @@ ${article.description ? `Description: ${article.description}` : ""}`;
 							{
 								type: "text",
 								text: `Error searching articles: ${error instanceof Error ? error.message : "Unknown error"}`,
-							},
-						],
-					};
-				}
-			},
-		);
-
-		// Tool 4: Filter articles by category
-		this.server.tool(
-			"filter_by_category",
-			{
-				category: z.number().int().nonnegative().describe("Category number to filter articles"),
-			},
-			async ({ category }) => {
-				try {
-					const articles = await this.fetchArticles();
-					const filteredArticles = articles.filter((article) => article.category === category);
-
-					if (filteredArticles.length === 0) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: `No articles found in category ${category}`,
-								},
-							],
-						};
-					}
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: `Found ${filteredArticles.length} article(s) in category ${category}:\n\n${this.formatArticles(filteredArticles)}`,
-							},
-						],
-					};
-				} catch (error) {
-					return {
-						content: [
-							{
-								type: "text",
-								text: `Error filtering articles: ${error instanceof Error ? error.message : "Unknown error"}`,
 							},
 						],
 					};

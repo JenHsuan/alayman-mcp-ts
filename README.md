@@ -25,6 +25,20 @@ This MCP server provides four tools for interacting with the alayman.io articles
 npm install
 ```
 
+### Configuration
+
+The server requires the Alayman API URL to be configured as an environment variable. The API URL is set in `wrangler.jsonc`:
+
+```jsonc
+{
+  "vars": {
+    "ALAYMAN_API_URL": "https://alayman.io/api/articles"
+  }
+}
+```
+
+For local development, you can also create a `.env` file (see `.env.example` for reference).
+
 ### Development
 
 Run the server locally:
