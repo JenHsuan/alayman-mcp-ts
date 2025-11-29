@@ -8,12 +8,18 @@ import fetch from 'node-fetch';
 
 // Article interface for type safety
 interface Article {
-  id?: string;
+  id: number;
   title: string;
-  content?: string;
-  url?: string;
-  publishedAt?: string;
-  [key: string]: any;
+  subtitle: string;
+  image: string;
+  url: string;
+  name: string;
+  time: string;
+  readtime: string;
+  category: number;
+  description: string;
+  shareCount: number;
+  checkCount: number;
 }
 
 // Initialize MCP Server
@@ -32,8 +38,8 @@ const server = new Server(
 
 // Define input schema for fetch-articles tool
 const FetchArticlesSchema = z.object({
-  limit: z.number().optional().describe('Maximum number of articles to return'),
-  offset: z.number().optional().describe('Number of articles to skip'),
+  limit: z.number().default(20).describe('Maximum number of articles to return'),
+  offset: z.number().default(0).describe('Number of articles to skip'),
   search: z.string().optional().describe('Search term to filter articles')
 });
 
@@ -42,13 +48,7 @@ async function fetchArticles(args: z.infer<typeof FetchArticlesSchema>) {
   try {
     const { limit, offset, search } = args;
 
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (offset !== undefined) params.append('offset', offset.toString());
-    if (search) params.append('search', search);
-
-    const url = `https://alayman.io/api/articles${params.toString() ? '?' + params.toString() : ''}`;
+    const url = 'https://alayman.io/api/articles';
 
     // Log to stderr (not stdout to avoid corrupting MCP messages)
     console.error(`[MCP] Fetching articles from: ${url}`);
@@ -62,22 +62,48 @@ async function fetchArticles(args: z.infer<typeof FetchArticlesSchema>) {
     const data = await response.json() as Article[] | { articles?: Article[] };
 
     // Handle different possible response formats
-    let articles: Article[];
+    let allArticles: Article[];
     if (Array.isArray(data)) {
-      articles = data;
+      allArticles = data;
     } else if (data && typeof data === 'object' && 'articles' in data) {
-      articles = data.articles || [];
+      allArticles = data.articles || [];
     } else {
-      articles = [];
+      allArticles = [];
     }
 
-    console.error(`[MCP] Successfully fetched ${articles.length} articles`);
+    // Apply search filter if provided
+    let filteredArticles = allArticles;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredArticles = allArticles.filter(article =>
+        article.title.toLowerCase().includes(searchLower) ||
+        article.subtitle.toLowerCase().includes(searchLower) ||
+        article.description.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Calculate total before pagination
+    const total = filteredArticles.length;
+
+    // Apply pagination
+    const paginatedArticles = filteredArticles.slice(offset, offset + limit);
+
+    // Calculate if there are more articles
+    const has_more = offset + limit < total;
+
+    console.error(`[MCP] Successfully fetched ${total} articles (returning ${paginatedArticles.length})`);
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify({ articles, count: articles.length, success: true }, null, 2)
+          text: JSON.stringify({
+            articles: paginatedArticles,
+            total,
+            offset,
+            limit,
+            has_more
+          }, null, 2)
         }
       ]
     };
@@ -89,7 +115,14 @@ async function fetchArticles(args: z.infer<typeof FetchArticlesSchema>) {
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify({ articles: [], count: 0, success: false, error: errorMessage }, null, 2)
+          text: JSON.stringify({
+            articles: [],
+            total: 0,
+            offset: 0,
+            limit: 20,
+            has_more: false,
+            error: errorMessage
+          }, null, 2)
         }
       ],
       isError: true
