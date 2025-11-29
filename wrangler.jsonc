@@ -22,6 +22,6 @@
 		"enabled": true
 	},
 	"vars": {
-		"ALAYMAN_API_URL": "https://alayman.io/api/articles"
+		"ALAYMAN_API_URL": "https://example.com/api"
 	}
 }
