@@ -153,6 +153,33 @@ ${article.description ? `Description: ${article.description}` : ""}`;
 				}
 			},
 		);
+
+		// Prompt: List articles with custom condition
+		this.server.registerPrompt(
+			"list_articles",
+			{
+				title: "list_alayman_articles",
+				description: "Generate a prompt to list a specific number of alayman's articles with custom conditions",
+				argsSchema: {
+					number: z.coerce.number().int().positive().default(10).describe("Number of articles to list (default: 10)"),
+					condition: z.string().optional().describe("Custom condition or filter criteria for the articles"),
+				},
+			},
+			async ({ number = 10, condition }) => {
+				const text = `List ${number} alayman's articles${condition ? ` ${condition}` : ""}`;
+				return {
+					messages: [
+						{
+							role: "user" as const,
+							content: {
+								type: "text" as const,
+								text: text,
+							},
+						},
+					],
+				};
+			},
+		);
 	}
 }
 
