@@ -32,7 +32,7 @@ The server requires the Alayman API URL to be configured as an environment varia
 ```jsonc
 {
   "vars": {
-    "ALAYMAN_API_URL": "https://alayman.io/api/articles"
+    "ARTICLES_API_URL": "https://example.com/api"
   }
 }
 ```

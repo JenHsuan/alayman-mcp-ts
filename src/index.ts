@@ -20,7 +20,7 @@ interface Article {
 
 // Cloudflare Workers environment bindings
 interface Env {
-	ALAYMAN_API_URL: string;
+	ARTICLES_API_URL: string;
 }
 
 // Define our MCP agent for Alayman articles (exported as Durable Object)
@@ -32,7 +32,7 @@ class AlaymanMCP extends McpAgent<Env> {
 
 	private async fetchArticles(): Promise<Article[]> {
 		try {
-			const apiUrl = (this.env as Env).ALAYMAN_API_URL;
+			const apiUrl = (this.env as Env).ARTICLES_API_URL;
 			const response = await fetch(apiUrl);
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
