@@ -108,50 +108,7 @@ ${article.description ? `Description: ${article.description}` : ""}`;
 			},
 		);
 
-		// Tool 2: Get article by ID
-		this.server.tool(
-			"get_article_by_id",
-			{
-				id: z.number().int().positive().describe("The ID of the article to fetch"),
-			},
-			async ({ id }) => {
-				try {
-					const articles = await this.fetchArticles();
-					const article = articles.find((a) => a.id === id);
-
-					if (!article) {
-						return {
-							content: [
-								{
-									type: "text",
-									text: `Article with ID ${id} not found`,
-								},
-							],
-						};
-					}
-
-					return {
-						content: [
-							{
-								type: "text",
-								text: this.formatArticle(article),
-							},
-						],
-					};
-				} catch (error) {
-					return {
-						content: [
-							{
-								type: "text",
-								text: `Error fetching article: ${error instanceof Error ? error.message : "Unknown error"}`,
-							},
-						],
-					};
-				}
-			},
-		);
-
-		// Tool 3: Search articles by title keyword
+		// Tool 2: Search articles by title keyword
 		this.server.tool(
 			"search_articles",
 			{
