@@ -1,0 +1,264 @@
+import { McpAgent } from "agents/mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+
+// Article interface based on the API structure
+interface Article {
+	id: number;
+	title: string;
+	subtitle: string;
+	image: string;
+	url: string;
+	name: string;
+	time: string;
+	readtime: string;
+	category: number;
+	description: string;
+	shareCount: number;
+	checkCount: number;
+}
+
+// Cloudflare Workers environment bindings
+interface Env {
+	// Add any environment variables or bindings here if needed
+}
+
+// Define our MCP agent for Alayman articles (exported as Durable Object)
+class AlaymanMCP extends McpAgent {
+	server = new McpServer({
+		name: "Alayman Articles Server",
+		version: "1.0.0",
+	});
+
+	private async fetchArticles(): Promise<Article[]> {
+		try {
+			const response = await fetch("https://alayman.io/api/articles");
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			const articles = await response.json();
+			return articles as Article[];
+		} catch (error) {
+			console.error("Error fetching articles:", error);
+			throw error;
+		}
+	}
+
+	private formatArticle(article: Article): string {
+		return `ID: ${article.id}
+Title: ${article.title}
+Subtitle: ${article.subtitle}
+Author: ${article.name}
+Published: ${article.time}
+Reading Time: ${article.readtime}
+Category: ${article.category}
+URL: ${article.url}
+Image: ${article.image}
+Shares: ${article.shareCount}
+Checks: ${article.checkCount}
+${article.description ? `Description: ${article.description}` : ""}`;
+	}
+
+	private formatArticles(articles: Article[]): string {
+		return articles.map((article) => this.formatArticle(article)).join("\n\n---\n\n");
+	}
+
+	async init() {
+		// Tool 1: Get all articles
+		this.server.tool("get_all_articles", {}, async () => {
+			try {
+				const articles = await this.fetchArticles();
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Found ${articles.length} articles:\n\n${this.formatArticles(articles)}`,
+						},
+					],
+				};
+			} catch (error) {
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Error fetching articles: ${error instanceof Error ? error.message : "Unknown error"}`,
+						},
+					],
+				};
+			}
+		});
+
+		// Tool 2: Get article by ID
+		this.server.tool(
+			"get_article_by_id",
+			{
+				id: z.number().int().positive().describe("The ID of the article to fetch"),
+			},
+			async ({ id }) => {
+				try {
+					const articles = await this.fetchArticles();
+					const article = articles.find((a) => a.id === id);
+
+					if (!article) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: `Article with ID ${id} not found`,
+								},
+							],
+						};
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: this.formatArticle(article),
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error fetching article: ${error instanceof Error ? error.message : "Unknown error"}`,
+							},
+						],
+					};
+				}
+			},
+		);
+
+		// Tool 3: Search articles by title keyword
+		this.server.tool(
+			"search_articles",
+			{
+				keyword: z.string().min(1).describe("Keyword to search in article titles"),
+			},
+			async ({ keyword }) => {
+				try {
+					const articles = await this.fetchArticles();
+					const searchTerm = keyword.toLowerCase();
+					const matchedArticles = articles.filter((article) =>
+						article.title.toLowerCase().includes(searchTerm),
+					);
+
+					if (matchedArticles.length === 0) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: `No articles found matching keyword: "${keyword}"`,
+								},
+							],
+						};
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Found ${matchedArticles.length} article(s) matching "${keyword}":\n\n${this.formatArticles(matchedArticles)}`,
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error searching articles: ${error instanceof Error ? error.message : "Unknown error"}`,
+							},
+						],
+					};
+				}
+			},
+		);
+
+		// Tool 4: Filter articles by category
+		this.server.tool(
+			"filter_by_category",
+			{
+				category: z.number().int().nonnegative().describe("Category number to filter articles"),
+			},
+			async ({ category }) => {
+				try {
+					const articles = await this.fetchArticles();
+					const filteredArticles = articles.filter((article) => article.category === category);
+
+					if (filteredArticles.length === 0) {
+						return {
+							content: [
+								{
+									type: "text",
+									text: `No articles found in category ${category}`,
+								},
+							],
+						};
+					}
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Found ${filteredArticles.length} article(s) in category ${category}:\n\n${this.formatArticles(filteredArticles)}`,
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error filtering articles: ${error instanceof Error ? error.message : "Unknown error"}`,
+							},
+						],
+					};
+				}
+			},
+		);
+	}
+}
+
+// Export the Durable Object class
+export { AlaymanMCP };
+
+export default {
+	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		const url = new URL(request.url);
+
+		// SSE endpoints
+		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
+			return AlaymanMCP.serveSSE("/sse").fetch(request, env, ctx);
+		}
+
+		// MCP endpoint
+		if (url.pathname === "/mcp") {
+			return AlaymanMCP.serve("/mcp").fetch(request, env, ctx);
+		}
+
+		// Health check / info endpoint
+		if (url.pathname === "/") {
+			return new Response(
+				JSON.stringify({
+					name: "Alayman MCP Server",
+					version: "1.0.0",
+					description: "MCP server for fetching articles from alayman.io",
+					endpoints: {
+						sse: "/sse",
+						mcp: "/mcp",
+					},
+					tools: ["get_all_articles", "get_article_by_id", "search_articles", "filter_by_category"],
+				}),
+				{
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+		}
+
+		return new Response("Not found", { status: 404 });
+	},
+};
