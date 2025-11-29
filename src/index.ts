@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -48,7 +49,11 @@ async function fetchArticles(args: z.infer<typeof FetchArticlesSchema>) {
   try {
     const { limit, offset, search } = args;
 
-    const url = 'https://alayman.io/api/articles';
+    const url = process.env.API_BASE_URL;
+
+    if (!url) {
+      throw new Error('API_BASE_URL environment variable is not set');
+    }
 
     // Log to stderr (not stdout to avoid corrupting MCP messages)
     console.error(`[MCP] Fetching articles from: ${url}`);
