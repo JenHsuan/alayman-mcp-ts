@@ -46,7 +46,7 @@ Edit `.env` if needed (default values should work):
 
 ```env
 # API Configuration
-API_BASE_URL=https://alayman.io/api/articles
+API_BASE_URL=https://example.com/api
 
 # Server Configuration
 PORT=3000
@@ -292,8 +292,6 @@ The server exposes the following endpoints:
 
 ## API Documentation
 
-The server fetches data from: `https://alayman.io/api/articles`
-
 Query parameters supported:
 - `limit` - Maximum results
 - `offset` - Pagination offset
@@ -328,7 +326,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - **Network issues**: Verify you can access `http://localhost:3000/health` from your browser
 
 ### API errors
-- **Articles not fetching**: Verify that `https://alayman.io/api/articles` is accessible
 - **Check your internet connection**: The server needs internet access to fetch articles
 - **Review server logs**: Check stderr output for detailed error messages prefixed with `[MCP]`
 
