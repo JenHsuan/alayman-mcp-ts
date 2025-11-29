@@ -64,29 +64,48 @@ ${article.description ? `Description: ${article.description}` : ""}`;
 	}
 
 	async init() {
-		// Tool 1: Get all articles
-		this.server.tool("get_all_articles", {}, async () => {
-			try {
-				const articles = await this.fetchArticles();
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Found ${articles.length} articles:\n\n${this.formatArticles(articles)}`,
-						},
-					],
-				};
-			} catch (error) {
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Error fetching articles: ${error instanceof Error ? error.message : "Unknown error"}`,
-						},
-					],
-				};
-			}
-		});
+		// Tool 1: Get all articles with pagination
+		this.server.tool(
+			"get_all_articles",
+			{
+				limit: z.number().int().positive().default(20).describe("Number of articles to return (default: 20)"),
+				offset: z.number().int().nonnegative().default(0).describe("Number of articles to skip (default: 0)"),
+			},
+			async ({ limit = 20, offset = 0 }) => {
+				try {
+					const articles = await this.fetchArticles();
+					const total = articles.length;
+					const paginatedArticles = articles.slice(offset, offset + limit);
+					const hasMore = offset + limit < total;
+
+					const response = {
+						articles: paginatedArticles,
+						total,
+						offset,
+						limit,
+						has_more: hasMore,
+					};
+
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(response, null, 2),
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error fetching articles: ${error instanceof Error ? error.message : "Unknown error"}`,
+							},
+						],
+					};
+				}
+			},
+		);
 
 		// Tool 2: Get article by ID
 		this.server.tool(
