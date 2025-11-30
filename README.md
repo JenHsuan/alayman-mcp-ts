@@ -52,7 +52,7 @@ npm run dev
 * Add the MCP server URL to your Claude code
 
 ```
-claude mcp add --scope user --transport sse alayman http://localhost:8788/sse
+claude mcp add --scope user --transport sse alayman http://localhost:8787/sse
 ```
 
 The server will be available at `http://localhost:8787`
@@ -158,7 +158,7 @@ alayman-mcp-ts/
 │   └── index.ts          # Main MCP server implementation
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-├── wrangler.toml         # Cloudflare Workers configuration
+├── wrangler.jsonc        # Cloudflare Workers configuration
 ├── .gitignore           # Git ignore patterns
 └── README.md            # This file
 ```
