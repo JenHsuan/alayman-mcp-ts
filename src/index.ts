@@ -21,6 +21,9 @@ interface Article {
 // Cloudflare Workers environment bindings
 interface Env {
 	ARTICLES_API_URL: string;
+	RATE_LIMITER: {
+		limit: (options: { key: string }) => Promise<{ success: boolean }>;
+	};
 }
 
 // Define our MCP agent for Alayman articles (exported as Durable Object)
@@ -187,8 +190,32 @@ ${article.description ? `Description: ${article.description}` : ""}`;
 export { AlaymanMCP };
 
 export default {
-	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url);
+
+		// Extract rate limiting key from Mcp-session-id header 
+		const sessionId = request.headers.get("Mcp-session-id") || request.headers.get('mcp-session-id') || "unknown";
+
+		// Apply rate limiting to all endpoints
+		const { success } = await env.RATE_LIMITER.limit({ key: sessionId });
+
+		if (!success) {
+			return new Response(
+				JSON.stringify({
+					error: "Rate limit exceeded",
+					message: "You have exceeded the rate limit of 60 requests per 60 seconds. Please try again later.",
+					limit: 60,
+					period: 60,
+				}),
+				{
+					status: 429,
+					headers: {
+						"Content-Type": "application/json",
+						"Retry-After": "60",
+					},
+				},
+			);
+		}
 
 		// SSE endpoints
 		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
@@ -213,6 +240,11 @@ export default {
 					},
 					tools: ["get_all_articles", "search_articles"],
 					prompts: ["list_articles"],
+					rateLimit: {
+						limit: 60,
+						period: 60,
+						key: "Mcp-session-id header or IP address",
+					},
 				}),
 				{
 					status: 200,
