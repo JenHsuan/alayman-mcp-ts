@@ -1,25 +1,25 @@
 {
-  "name": "alayman-mcp-server",
-  "version": "1.0.0",
-  "description": "MCP server for fetching articles from alayman.io",
-  "main": "src/index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "check": "biome check --write .",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.20.2",
-    "agents": "^0.2.19",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.3.2",
-    "@cloudflare/workers-types": "^4.20250110.0",
-    "typescript": "^5.9.3",
-    "wrangler": "^4.45.2"
-  }
+	"name": "alayman-mcp-server",
+	"version": "1.0.0",
+	"description": "MCP server for fetching articles from alayman.io",
+	"main": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check": "biome check --write .",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.20.2",
+		"agents": "^0.2.19",
+		"zod": "^3.25.76"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.2",
+		"@cloudflare/workers-types": "^4.20250110.0",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.45.2"
+	}
 }
